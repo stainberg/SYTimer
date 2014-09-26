@@ -80,12 +80,12 @@ public class MyActivity extends Activity implements View.OnClickListener{
                 }
             });
             //使用SYTimerListener的例子
-            SYTimer.getInstance().addNotify(l, Long.valueOf(text.getText().toString()));
+            //SYTimer.getInstance().addNotify(l, Long.valueOf(text.getText().toString()));
 
         } else if(v.getId() == removeBtn.getId()) {
             //取消的示例
             SYTimer.getInstance().cancelTask(0);
-            SYTimer.getInstance().cancelNotify(l);
+            //SYTimer.getInstance().cancelNotify(l);
         }
     }
 
