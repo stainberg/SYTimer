@@ -36,7 +36,7 @@ public class SYTimer {
      * @return {@link SYTimer} instance
      * 获取计时器的实例
      */
-    public static final SYTimer getInstance() {
+    public static SYTimer getInstance() {
         if(instance == null) {
             synchronized (SYTimer.class) {
                 if(instance == null) {
@@ -67,8 +67,8 @@ public class SYTimer {
                 if(tasks.isEmpty()) {
                     try {
                         status = STATUS.WAITING;
-                        synchronized (tasks) {
-                            tasks.wait();
+                        synchronized (SYTimer.class) {
+                            SYTimer.class.wait();
                         }
                     } catch (InterruptedException e) {
                         status = STATUS.STOP;
@@ -77,12 +77,12 @@ public class SYTimer {
                     }
                 } else {
                     try {
-                        synchronized (tasks) {
+                        synchronized (SYTimer.class) {
                             SYTimerTask task = tasks.get(0);
                             long wait = task.getSurplus();
                             if(wait > 0) {
                                 isWaked = false;
-                                tasks.wait(wait);
+                                SYTimer.class.wait(wait);
                                 if(isWaked) {
                                     continue;
                                 }
@@ -92,6 +92,9 @@ public class SYTimer {
                         }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                        status = STATUS.STOP;
+                        thread.interrupt();
+                        return;
                     }
                 }
                 status = STATUS.RUNNING;
@@ -105,13 +108,13 @@ public class SYTimer {
      * 添加一个计时器事件
      */
     public void addTask(SYTimerTask task) {
-        synchronized (tasks) {
+        synchronized (SYTimer.class) {
             checkThread();
             tasks.add(task);
             Log.d("addTask","now = " + SystemClock.elapsedRealtime()  +  "addTask time to " + task.getWhen());
             Collections.sort(tasks, comparatorTask);
             isWaked = true;
-            tasks.notifyAll();
+            SYTimer.class.notifyAll();
         }
     }
 
@@ -121,11 +124,11 @@ public class SYTimer {
      * 取消一个计时器事件
      */
     public void cancelTask(SYTimerTask task) {
-        synchronized (tasks) {
+        synchronized (SYTimer.class) {
             if(tasks.contains(task)) {
                 tasks.remove(task);
                 isWaked = true;
-                tasks.notifyAll();
+                SYTimer.class.notifyAll();
             }
         }
     }
@@ -139,11 +142,11 @@ public class SYTimer {
     //FIXME now will remove the timer what the first get from the list.
     public void cancelTask(String name) {
         SYTimerTask task = getTaskByName(name);
-        synchronized (tasks) {
+        synchronized (SYTimer.class) {
             if(tasks.contains(task)) {
                 tasks.remove(task);
                 isWaked = true;
-                tasks.notifyAll();
+                SYTimer.class.notifyAll();
             }
         }
     }
@@ -154,11 +157,11 @@ public class SYTimer {
      * 取消一个时间轴上的计时器事件，按计时器在时间轴上的位置计算
      */
     public void cancelTask(int position) {
-        synchronized (tasks) {
+        synchronized (SYTimer.class) {
             if(tasks.size() > position) {
                 tasks.remove(position);
                 isWaked = true;
-                tasks.notifyAll();
+                SYTimer.class.notifyAll();
             }
         }
     }
@@ -168,7 +171,7 @@ public class SYTimer {
      * @param l 计时器接口
      * @param timeMillis 延迟时间，毫秒单位
      * 添加一个计时器事件接口，接口请参阅{@link SYTimerListener}
-     * 如果添加的是一个已经存在的计时器接口，则会更新当前存在的计时器接口，以新传入的{@value timeMillis}参数重新开始计时。
+     * 如果添加的是一个已经存在的计时器接口，则会更新当前存在的计时器接口，以新传入的{@param timeMillis}参数重新开始计时。
      */
     public void addNotify(final SYTimerListener l, long timeMillis) {
         SYTimerTask task = getTaskByName(String.valueOf(l.getClass().hashCode()));
@@ -186,16 +189,16 @@ public class SYTimer {
 
     /**
      *
-     * @param task
-     * @param timeMillis
+     * @param task 计时器任务
+     * @param timeMillis 延迟时间
      * 本地方法，用于更新计时器的时间
      */
     private void updateTask(SYTimerTask task,long timeMillis ) {
-        synchronized (tasks) {
+        synchronized (SYTimer.class) {
             task.setOffsetTimeMillis(timeMillis);
             Log.d("updateTask","now = " + SystemClock.elapsedRealtime()  + "update time to " + task.getWhen());
             isWaked = true;
-            tasks.notifyAll();
+            SYTimer.class.notifyAll();
         }
     }
 
@@ -230,9 +233,7 @@ public class SYTimer {
     private class ComparatorTask implements Comparator<org.stainberg.interactframework.core.timer.SYTimerTask> {
         @Override
         public int compare(org.stainberg.interactframework.core.timer.SYTimerTask lhs, org.stainberg.interactframework.core.timer.SYTimerTask rhs) {
-            SYTimerTask task1 = lhs;
-            SYTimerTask task2 = rhs;
-            return (int)(task1.getSurplus() - task2.getSurplus());
+            return (int)(lhs.getSurplus() - rhs.getSurplus());
         }
 
         @Override
