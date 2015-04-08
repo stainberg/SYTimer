@@ -64,24 +64,34 @@ public class MyActivity extends Activity implements View.OnClickListener{
     @Override
     public void onClick(View v) {
         if(v.getId() == addBtn.getId()) {
-            //使用SYTimerTask的例子
-            SYTimer.getInstance().addTask(new SYTimerTask(Integer.valueOf(text.getText().toString()), text.getText().toString()) {
+            result.setText("start = " + SystemClock.elapsedRealtime() + "\n");
+            ///*
+            //使用SYTimerTask的例子,加入了Step设置和回调
+            SYTimer.getInstance().addTask(new SYTimerTask(Integer.valueOf(text.getText().toString()), text.getText().toString(), syTimerStepListener, 1000) {
                 @Override
                 public void run() {
                     final SYTimerTask task = this;
                     mHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            result.setText("elapsedRealtime = " + SystemClock.elapsedRealtime() + "\n");
+                            result.append("SYTimerTask end elapsedRealtime = " + SystemClock.elapsedRealtime() + "\n");
                             result.append("name = " + task.getName() + "\n");
                             result.append("when = " + task.getWhen());
                         }
                     });
                 }
-            });
-            //使用SYTimerListener的例子
-            //SYTimer.getInstance().addNotify(l, Long.valueOf(text.getText().toString()));
 
+                @Override
+                public void onTimeOver() {
+                    Log.d("onTimeOver", "onTimeOver = " + SystemClock.elapsedRealtime());
+                }
+            });
+            //*/
+
+            /*
+            //使用SYTimerListener的例子
+            SYTimer.getInstance().addNotify(l, Long.valueOf(text.getText().toString()), syTimerStepListener, 1000);
+            */
         } else if(v.getId() == removeBtn.getId()) {
             //取消的示例
             SYTimer.getInstance().cancelTask(0);
@@ -89,17 +99,29 @@ public class MyActivity extends Activity implements View.OnClickListener{
         }
     }
 
+    private SYTimerTask.SYTimerStepListener syTimerStepListener = new SYTimerTask.SYTimerStepListener() {
+
+        @Override
+        public void onStepNotify(long step, long duration) {
+            Log.d("onStepNotify", "elapsedRealtime = " + SystemClock.elapsedRealtime());
+        }
+
+        @Override
+        public void onStepError(long step, long duration) {
+
+        }
+    };
+
     private SYTimerListener l = new SYTimerListener() {
         @Override
         public void onNotify() {
             Log.d("onNotify", "elapsedRealtime = " + SystemClock.elapsedRealtime());
-        }
-    };
-
-    private SYTimerListener l2 = new SYTimerListener() {
-        @Override
-        public void onNotify() {
-            Log.d("onNotify", "elapsedRealtime = " + SystemClock.elapsedRealtime());
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    result.append("onNotify end elapsedRealtime = " + SystemClock.elapsedRealtime() + "\n");
+                }
+            });
         }
     };
 

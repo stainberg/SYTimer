@@ -28,6 +28,7 @@ public class SYTimer {
         comparatorTask = new ComparatorTask();
         pool = Executors.newFixedThreadPool(10);
         thread = new Thread(r);
+        thread.setName("SYTimer");
         thread.start();
     }
 
@@ -124,6 +125,10 @@ public class SYTimer {
      * 取消一个计时器事件
      */
     public void cancelTask(SYTimerTask task) {
+        if(task == null) {
+            return;
+        }
+        task.cancel();
         synchronized (SYTimer.class) {
             if(tasks.contains(task)) {
                 tasks.remove(task);
@@ -142,6 +147,10 @@ public class SYTimer {
     //FIXME now will remove the timer what the first get from the list.
     public void cancelTask(String name) {
         SYTimerTask task = getTaskByName(name);
+        if(task == null) {
+            return;
+        }
+        task.cancel();
         synchronized (SYTimer.class) {
             if(tasks.contains(task)) {
                 tasks.remove(task);
@@ -159,6 +168,7 @@ public class SYTimer {
     public void cancelTask(int position) {
         synchronized (SYTimer.class) {
             if(tasks.size() > position) {
+                tasks.get(position).cancel();
                 tasks.remove(position);
                 isWaked = true;
                 SYTimer.class.notifyAll();
@@ -180,6 +190,36 @@ public class SYTimer {
                 @Override
                 public void run() {
                     l.onNotify();
+                }
+
+                @Override
+                public void onTimeOver() {
+                    synchronized (SYTimer.class) {
+                        isWaked = true;
+                        SYTimer.class.notifyAll();
+                    }
+                }
+            });
+        } else {
+            updateTask(task, timeMillis);
+        }
+    }
+
+    public void addNotify(final SYTimerListener l, long timeMillis, SYTimerTask.SYTimerStepListener stepListener, long step) {
+        SYTimerTask task = getTaskByName(String.valueOf(l.getClass().hashCode()));
+        if(task == null) {
+            addTask(new SYTimerTask(timeMillis, String.valueOf(l.getClass().hashCode()), stepListener, step) {
+                @Override
+                public void run() {
+                    l.onNotify();
+                }
+
+                @Override
+                public void onTimeOver() {
+                    synchronized (SYTimer.class) {
+                        isWaked = true;
+                        SYTimer.class.notifyAll();
+                    }
                 }
             });
         } else {
